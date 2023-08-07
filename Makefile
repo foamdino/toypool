@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-I.
+CFLAGS=-g3 -I.
 DEPS = toypool.h
 OBJ = toypool.o
 

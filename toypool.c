@@ -4,7 +4,7 @@
 #include <assert.h>
 #include "toypool.h"
 
-static int num_blobs         = 1000000;
+static int num_blobs         = 100;
 static unsigned int num_runs = 20;
 
 void
@@ -119,7 +119,7 @@ pool_alloc(toypool_t *pool)
 	elem_container_t *alloc = NULL;
 
 	/* The most likely use case is that we have a block that has space in it. */
-	if (pool->used_blocks.head != NULL)
+	if (pool->used_blocks.head != NULL) 
 		block = pool->used_blocks.head->data;
 	else
 	{
@@ -177,10 +177,10 @@ pool_alloc(toypool_t *pool)
 	if (block->free_elems == 0)
 	{
 		toy_move_to_list(&pool->used_blocks, &pool->full_blocks, &block->self);
-		printf("Moved full block=%p onto full_blocks in pool=%p(%s)\n",
-				block,
-				pool,
-				pool->name);
+		// printf("Moved full block=%p onto full_blocks in pool=%p(%s)\n",
+		// 		block,
+		// 		pool,
+		// 		pool->name);
 	}
 
 	/* To enforce bounds with cheri apis we need a pointer to the elem itself
@@ -228,36 +228,36 @@ pool_release(toypool_t *pool, void *elem)
 
 	/* actually release the allocation.. */
 	alloc = (elem - __builtin_offsetof(elem_container_t, mem.elem));
-	printf("alloc: %p alloc->block: %p", alloc, alloc->block);
-	//printf("alloc->block->next_free_alloc: %p", alloc->block->next_free_alloc);
-	// alloc->mem.next_free          = alloc->block->next_free_alloc;
-	// alloc->block->next_free_alloc = alloc;
+	assert(alloc->block != NULL);
 
-	// assert(alloc->block->pool->used_elems > 0);
+	alloc->mem.next_free          = alloc->block->next_free_alloc;
+	alloc->block->next_free_alloc = alloc;
 
-	// alloc->block->pool->used_elems--;
-	// alloc->block->pool->free_elems++;
-	// alloc->block->free_elems++;
+	assert(alloc->block->pool->used_elems > 0);
 
-	// /* Does this allocation block now need to move lists? */
-	// if (alloc->block->free_elems == alloc->block->pool->elems_per_block)
-	// {
-	// 	/* This block was used, but is now empty. */
-	// 	toy_move_to_list(&alloc->block->pool->used_blocks,
-	// 	                      &alloc->block->pool->empty_blocks,
-	// 	                      &alloc->block->self);
+	alloc->block->pool->used_elems--;
+	alloc->block->pool->free_elems++;
+	alloc->block->free_elems++;
 
-	// 	/* Reset the guts of this block to defragment it, in case it gets used again. */
-	// 	alloc->block->next_free_alloc = NULL;
-	// 	alloc->block->next_elem       = &alloc->block->elems;
-	// }
-	// else if (alloc->block->free_elems == 1)
-	// {
-	// 	/* This block was full, but is now only used. */
-	// 	toy_move_to_list(&alloc->block->pool->full_blocks,
-	// 	                      &alloc->block->pool->used_blocks,
-	// 	                      &alloc->block->self);
-	// }
+	/* Does this allocation block now need to move lists? */
+	if (alloc->block->free_elems == alloc->block->pool->elems_per_block)
+	{
+		/* This block was used, but is now empty. */
+		toy_move_to_list(&alloc->block->pool->used_blocks,
+		                      &alloc->block->pool->empty_blocks,
+		                      &alloc->block->self);
+
+		/* Reset the guts of this block to defragment it, in case it gets used again. */
+		alloc->block->next_free_alloc = NULL;
+		alloc->block->next_elem       = &alloc->block->elems;
+	}
+	else if (alloc->block->free_elems == 1)
+	{
+		/* This block was full, but is now only used. */
+		toy_move_to_list(&alloc->block->pool->full_blocks,
+		                      &alloc->block->pool->used_blocks,
+		                      &alloc->block->self);
+	}
 }
 
 static void alloc_blobs(toypool_t *pool, dlinklist_t *blobs)
@@ -276,18 +276,6 @@ static void alloc_blobs(toypool_t *pool, dlinklist_t *blobs)
 
 static void release_blobs(toypool_t *pool, dlinklist_t *blobs)
 {
-	
-	// int released = 0;
-	// node_t *n, *nx;
-	// DLINK_FORWARD_SAFE (blobs->head, n, nx)
-	// {
-	// 	toypool_test_blob_t *a_blob = n->data;
-	// 	// bl_dlink_remove(blobs, n);
-	// 	// bl_mempool_release(teb, pool, a_blob);
-	// 	released++;
-	// }
-
-	
 	assert(pool != NULL);
 	assert(blobs != NULL);
 	assert(blobs->head != NULL);
@@ -307,12 +295,8 @@ static void release_blobs(toypool_t *pool, dlinklist_t *blobs)
 
 int main(void)
 {
-    toypool_t *pool = pool_new("test-pool", 10, 10);
+    toypool_t *pool = pool_new("test-pool", sizeof(toypool_test_blob_t), 10);
     printf("Emtpy pool, number of free blocks: %u\n", pool->empty_blocks.length);
-
-    printf("Allocate a block and attach to the pool...\n");
-    block_new(pool);
-	printf("Number of free blocks now: %u\n", pool->empty_blocks.length);
 
 	dlinklist_t blobs = {.head = NULL, .tail = NULL, .length = 0};
 	alloc_blobs(pool, &blobs);
