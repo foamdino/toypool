@@ -16,8 +16,8 @@ enum
 };
 
 /* mmap */
-static inline void
-*toy_mmap(size_t size)
+static inline void *
+toy_mmap(size_t size)
 {
     void *p =
 		mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -57,7 +57,8 @@ struct dlinklist
 };
 
 /* note: doesn't malloc */
-static inline dlinklist_t *toy_append(dlinklist_t *list, node_t *to_add, void *data)
+static inline dlinklist_t *
+toy_append(dlinklist_t *list, node_t *to_add, void *data)
 {
     /* set-up node */
     to_add->data = data;
@@ -75,25 +76,8 @@ static inline dlinklist_t *toy_append(dlinklist_t *list, node_t *to_add, void *d
     return list;
 }
 
-node_t *
-toy_add_tail(dlinklist_t *list, node_t *node, void *data)
-{
-	node->data = data;
-
-	node->next = NULL;
-	node->prev = list->tail;
-
-	if (list->tail != NULL)
-		list->tail->next = node;
-	else if (list->head == NULL)
-		list->head = node;
-	list->tail = node;
-	list->length++;
-
-	return node;
-}
-
-static inline dlinklist_t *toy_prepend(dlinklist_t *list, node_t *to_add, void *data)
+static inline dlinklist_t *
+toy_prepend(dlinklist_t *list, node_t *to_add, void *data)
 {
     /* set-up node */
     to_add->data = data;
@@ -176,13 +160,13 @@ toy_remove(dlinklist_t *list, node_t *node)
 
 /** Macro - walk forward along a dlinklist from the head, caching the next node */
 #define DLINK_FORWARD_SAFE(l, n, nx)                                                \
-	for (n = (l), nx = ((n) ? (n)->next : NULL); n != NULL;                              \
+	for (n = (l), nx = ((n) ? (n)->next : NULL); n != NULL;                         \
 	     n = nx, nx = ((n) ? (n)->next : NULL))
 
 
 /* pool related */
 typedef struct toypool toypool_t;
-typedef struct elem_container elem_container_t;
+typedef struct elem_alloc elem_alloc_t;
 typedef struct memblock memblock_t;
 
 /* Memory pool block containing individual elements. */
@@ -190,44 +174,44 @@ struct memblock
 {
 	node_t self;            /**< Pool attachment node. */
 	toypool_t *pool;             /**< Pointer to the pool that owns this block. */
-	elem_container_t *next_free_alloc; /**< Next object in the block. */
+	elem_alloc_t *next_free_alloc; /**< Next object in the block. */
 	void *next_elem;                /**< Next element pointer */
 	unsigned int free_elems;        /**< Number of free elements in this block. */
-    uintptr_t end_addr;          /**< End address of the memblock */
+	uintptr_t end_addr;          /**< End address of the memblock */
 
 	/* Element memory at the end. This must be last. */
 	void *elems; /**< Elements - this must be last. */
 };
 
-/* An element container. */
-struct elem_container
+/* An element allocation container. */
+struct elem_alloc
 {
 	memblock_t *block; /**< Pointer to the block that owns this allocation. */
 	union {
-		elem_container_t
-			*next_free;        /**< Pointer to the next free allocation, when unused. */
+		elem_alloc_t *next_free; /**< Pointer to the next free allocation, when unused. */
 		unsigned char elem[1]; /**< Memory element, when used. */
-		void *padding;         /**< Padding */
+		void *padding; /**< Padding */
 	} mem;
 };
 
 struct toypool
 {
-    char name[TOYPOOL_NAME_LEN];
-    dlinklist_t empty_blocks;
-    dlinklist_t used_blocks;
-    dlinklist_t full_blocks;
-    size_t elem_size; /* adjusted/padded elem size */
-    size_t requested_elem_size; /* originally requested elem size */
-    size_t elems_size; /* allocation size = num elems * elem_size */
-    size_t block_size;
-    unsigned int elems_per_block;
-    uint64_t total_elems;
-    uint64_t free_elems;
-    uint64_t used_elems;
+	char name[TOYPOOL_NAME_LEN];
+	dlinklist_t empty_blocks;
+	dlinklist_t used_blocks;
+	dlinklist_t full_blocks;
+	size_t elem_size; /* adjusted/padded elem size */
+	size_t requested_elem_size; /* originally requested elem size */
+	size_t elems_size; /* allocation size = num elems * elem_size */
+	size_t block_size;
+	unsigned int elems_per_block;
+	uint64_t total_elems;
+	uint64_t free_elems;
+	uint64_t used_elems;
 };
 
 /* this struct is used as our test struct */
+typedef struct toypool_test_blob toypool_test_blob_t;
 struct toypool_test_blob
 {
     node_t self;        /**< link to self */
@@ -237,7 +221,5 @@ struct toypool_test_blob
 
 	void *opaque_data; /**< pointer to opaque data */
 };
-
-typedef struct toypool_test_blob toypool_test_blob_t;
 
 #endif /* TOYPOOL_H */

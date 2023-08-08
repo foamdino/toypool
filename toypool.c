@@ -80,10 +80,10 @@ pool_new(const char *name,
     size_t requested_elem_size = elem_size;
 
     /* The requested element size may be something quite obscure. We need it to be
-	 * at least sizeof(elem_container_t) and be aligned. */
-	elem_size = __builtin_offsetof(elem_container_t, mem.elem) + elem_size;
-	if (elem_size < sizeof(elem_container_t))
-		elem_size = sizeof(elem_container_t);
+	 * at least sizeof(elem_alloc_t) and be aligned. */
+	elem_size = __builtin_offsetof(elem_alloc_t, mem.elem) + elem_size;
+	if (elem_size < sizeof(elem_alloc_t))
+		elem_size = sizeof(elem_alloc_t);
 	if (elem_size % TOYPOOL_ALIGNMENT_SZ)
 		elem_size =
 			elem_size + TOYPOOL_ALIGNMENT_SZ - (elem_size % TOYPOOL_ALIGNMENT_SZ);
@@ -116,7 +116,7 @@ pool_alloc(toypool_t *pool)
 	assert(pool != NULL);
 
 	memblock_t *block = NULL;
-	elem_container_t *alloc = NULL;
+	elem_alloc_t *alloc = NULL;
 
 	/* The most likely use case is that we have a block that has space in it. */
 	if (pool->used_blocks.head != NULL) 
@@ -208,13 +208,13 @@ pool_release(toypool_t *pool, void *elem)
 	assert(pool != NULL);
 	assert(elem != NULL);
 
-	elem_container_t *alloc;
+	elem_alloc_t *alloc;
 
 	/* Handle cheri specific logic - resetting bounds, finding containing block etc.. */
 	/*
 	First we must find the block that contains the elem we want to free:
 	
-	memblock_t *container_block = find_elem_block(teb, pool, elem);
+	memblock_t *container_block = find_elem_block(pool, elem);
 
 	Next we need the bounds of the block that contains the elem:
 
@@ -227,7 +227,7 @@ pool_release(toypool_t *pool, void *elem)
 	*/
 
 	/* actually release the allocation.. */
-	alloc = (elem - __builtin_offsetof(elem_container_t, mem.elem));
+	alloc = (elem - __builtin_offsetof(elem_alloc_t, mem.elem));
 	assert(alloc->block != NULL);
 
 	alloc->mem.next_free          = alloc->block->next_free_alloc;
@@ -269,7 +269,7 @@ static void alloc_blobs(toypool_t *pool, dlinklist_t *blobs)
 	for (int i = 0; i < num_blobs; i++)
 	{
 		toypool_test_blob_t *a_blob = pool_alloc(pool);
-		toy_add_tail(blobs, &a_blob->self, a_blob);
+		toy_append(blobs, &a_blob->self, a_blob);
 	}
 	printf("finished allocating test blobs; num blobs on list [%u]\n", blobs->length);
 }
