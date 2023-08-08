@@ -12,7 +12,7 @@ block_new(toypool_t *pool)
 {
     assert(pool != NULL);
 
-    /* Allocate a new block. Note use mmap() here, so that memory can be returned to the
+  /* Allocate a new block. Note use mmap() here, so that memory can be returned to the
 	 * system when blocks are released within the application lifecycle. */
 	memblock_t *block = toy_mmap(pool->block_size);
 	block->pool = pool;
@@ -79,7 +79,7 @@ pool_new(const char *name,
 
     size_t requested_elem_size = elem_size;
 
-    /* The requested element size may be something quite obscure. We need it to be
+  /* The requested element size may be something quite obscure. We need it to be
 	 * at least sizeof(elem_alloc_t) and be aligned. */
 	elem_size = __builtin_offsetof(elem_alloc_t, mem.elem) + elem_size;
 	if (elem_size < sizeof(elem_alloc_t))
@@ -93,7 +93,7 @@ pool_new(const char *name,
     assert((elem_size % TOYPOOL_ALIGNMENT_SZ) == 0);
 	printf("Adjusted elem_size (should be 0): %lu\n", (elem_size % TOYPOOL_ALIGNMENT_SZ));
 
-    /* Create the pool and save our individual element size and the number of elements per
+  /* Create the pool and save our individual element size and the number of elements per
 	 * block. Our elems_size is therefore (elem_size * elems_per_block).
 	 *
 	 * The block size itself is the size of the block header (up to the elems member),
